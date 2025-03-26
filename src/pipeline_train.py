@@ -3,24 +3,39 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+import argparse
 from vae import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-df = pd.read_csv("./Sleep_Data_Sampled.csv")
-X = df[['Age', 'Quality of Sleep', 'Physical Activity Level', 'Stress Level', 'Heart Rate', 'Daily Steps']]
-
-input_dim = X.shape[1]   # Nombre de features dans les données tabulaires
-latent_dim = 10  # Taille de l'espace latent
-hidden_dim = 64  # Taille des couches cachées
-batch_size = 16
-num_epochs = 20
-learning_rate = 0.001
-
-scaler = preprocessing.StandardScaler()
 
 
-if __name__ == "__main__":
+def main_train():
+    global scaler, input_dim, hidden_dim, latent_dim, df, X
+    parser = argparse.ArgumentParser(description="Script pour traiter un fichier CSV.")
+    parser.add_argument("--csv_path", type=str, required=True, help="Chemin du fichier CSV à traiter")
+    
+    args = parser.parse_args()
+    print(f"Le fichier CSV spécifié est : {args.csv_path}")
+
+    try:
+        df = pd.read_csv(args.csv_path)
+        print("Aperçu du fichier CSV :")
+        print(df.head())  # Affiche les premières lignes du fichier
+    except Exception as e:
+        print(f"Erreur lors de la lecture du fichier CSV : {e}")
+
+    X = df[['Age', 'Quality of Sleep', 'Physical Activity Level', 'Stress Level', 'Heart Rate', 'Daily Steps']]
+
+    input_dim = X.shape[1]   # Nombre de features dans les données tabulaires
+    latent_dim = 10  # Taille de l'espace latent
+    hidden_dim = 64  # Taille des couches cachées
+    batch_size = 16
+    num_epochs = 20
+    learning_rate = 0.001
+
+    scaler = preprocessing.StandardScaler()
+    
     
 
     # Initialiser et entraîner le modèle
@@ -72,8 +87,13 @@ if __name__ == "__main__":
 
         print(f'=====  epoch {epoch}/{num_epochs}, total loss {avg_loss:.4f}, recon loss {avg_reconstruction_loss:.4f}, kl_loss {avg_kl_loss:.4f}')
     torch.save(vae.state_dict(), "./output/vae_model.pth")
-    print(vae.state_dict())
+  
     evaluate_model(vae, val_loader, device)
+    
+
+
+if __name__ == "__main__":
+    main_train()
     
 
     
