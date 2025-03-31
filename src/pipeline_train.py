@@ -4,14 +4,12 @@ from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import argparse
+import json
 from vae import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-
-
-def main_train():
-    global scaler, input_dim, hidden_dim, latent_dim, df, X
+def import_data():
+    global df, X
     parser = argparse.ArgumentParser(description="Script pour traiter un fichier CSV.")
     parser.add_argument("--csv_path", type=str, required=True, help="Chemin du fichier CSV à traiter")
     
@@ -25,17 +23,42 @@ def main_train():
     except Exception as e:
         print(f"Erreur lors de la lecture du fichier CSV : {e}")
 
-    X = df[['Age', 'Quality of Sleep', 'Physical Activity Level', 'Stress Level', 'Heart Rate', 'Daily Steps']]
+    return df
 
-    input_dim = X.shape[1]   # Nombre de features dans les données tabulaires
+scaler = preprocessing.StandardScaler()
+df = import_data()
+X = df[['Age', 'Quality of Sleep', 'Physical Activity Level', 'Stress Level', 'Heart Rate', 'Daily Steps']]
+
+def sauvegarder_hyperparametres(hyperparametres, nom_fichier="hyperparametres.json"):
+    """
+    Sauvegarde les hyperparamètres dans un fichier JSON.
+    
+    :param hyperparametres: Dictionnaire contenant les hyperparamètres.
+    :param nom_fichier: Nom du fichier où sauvegarder les hyperparamètres.
+    """
+    with open("./output/" + nom_fichier, "w") as fichier:
+        json.dump(hyperparametres, fichier, indent=4)
+    print(f"Hyperparamètres sauvegardés dans {nom_fichier}.")
+
+
+def main_train():
+    global scaler
+
     latent_dim = 10  # Taille de l'espace latent
     hidden_dim = 64  # Taille des couches cachées
     batch_size = 16
     num_epochs = 20
     learning_rate = 0.001
-
-    scaler = preprocessing.StandardScaler()
-    
+    input_dim = X.shape[1]   # Nombre de features dans les données tabulaires
+    hyperparametres = {
+        "latent_dim": 10,  # Taille de l'espace latent
+        "hidden_dim": 64,  # Taille des couches cachées
+        "batch_size": 16,
+        "num_epochs": 20,
+        "learning_rate": 0.001,
+        "input_dim": X.shape[1] 
+    }
+    sauvegarder_hyperparametres(hyperparametres, "hyperparametres.json")
     
 
     # Initialiser et entraîner le modèle
@@ -94,6 +117,8 @@ def main_train():
 
 if __name__ == "__main__":
     main_train()
+    df = df
+    X = X
     
 
     

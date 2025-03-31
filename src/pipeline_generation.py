@@ -1,7 +1,10 @@
 import torch
 import pandas as pd
+import json
 from vae import *
-from pipeline_train import scaler, input_dim, hidden_dim, latent_dim, df, X, device
+from pipeline_train import scaler, device, df, X
+
+# input_dim, hidden_dim, latent_dim, df, X
 
 
 # df = pd.read_csv("./Sleep_Data_Sampled.csv")
@@ -13,6 +16,31 @@ from pipeline_train import scaler, input_dim, hidden_dim, latent_dim, df, X, dev
 # latent_dim = 64
 # num_embeddings = 128
 # batch_size = 32
+
+
+def get_hyperparametres_json(nom_fichier):
+    """
+    Lit les hyperparamètres depuis un fichier JSON.
+    
+    :param nom_fichier: Nom du fichier JSON contenant les hyperparamètres.
+    :return: Dictionnaire des hyperparamètres.
+    """
+    with open(nom_fichier, "r") as fichier:
+        hyperparametres = json.load(fichier)
+    print(f"Hyperparamètres chargés depuis {nom_fichier}:")
+    print(hyperparametres)
+    return hyperparametres
+
+# Exemple d'utilisation
+hyperparametres = get_hyperparametres_json("./output/hyperparametres.json")
+
+latent_dim = hyperparametres["latent_dim"]  # Taille de l'espace latent
+hidden_dim = hyperparametres["hidden_dim"]  # Taille des couches cachées
+batch_size = hyperparametres["batch_size"]
+num_epochs = hyperparametres["num_epochs"]
+learning_rate = hyperparametres["learning_rate"]
+input_dim = hyperparametres["input_dim"]
+
 num_samples = 10
 origin_data = df
 X_scaled = scaler.fit_transform(X.values)

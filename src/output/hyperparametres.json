@@ -1,0 +1,8 @@
+{
+    "latent_dim": 10,
+    "hidden_dim": 64,
+    "batch_size": 16,
+    "num_epochs": 20,
+    "learning_rate": 0.001,
+    "input_dim": 6
+}

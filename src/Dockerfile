@@ -1,13 +1,5 @@
 FROM python:3.10
 
-# Installer les dépendances système nécessaires pour PyTorch
-RUN apt-get update && apt-get install -y \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    && rm -rf /var/lib/apt/lists/*
-
 # Définir le répertoire de travail
 WORKDIR /app
 
@@ -20,8 +12,16 @@ VOLUME /app/output
 # Copier le fichier des dépendances
 COPY requirements.txt .
 
-# Installer les dépendances Python
-RUN pip install --no-cache-dir -r requirements.txt
+# Installer les dépendances avec cache
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
+
+# Installer les dépendances système nécessaires pour PyTorch
+RUN apt-get update && apt-get install -y \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copier le script Python
 COPY pipeline_train.py .
