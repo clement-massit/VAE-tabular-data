@@ -2,7 +2,7 @@ import torch
 import pandas as pd
 import json
 from vae import *
-from pipeline_train import scaler, device, df, X
+from pipeline_train import scaler, device, df, X, shape_processor, pipe, preprocessor
 
 # input_dim, hidden_dim, latent_dim, df, X
 
@@ -31,6 +31,17 @@ def get_hyperparametres_json(nom_fichier):
     print(hyperparametres)
     return hyperparametres
 
+def inverse_transform_pipe(X):
+    arrays = []
+    for name, indices in pipe['preprocessor'].output_indices_.items():
+    
+        transformer = pipe['preprocessor'].named_transformers_.get(name, None)
+        arr = X[:, indices.start:indices.stop]
+        if transformer is not None and hasattr(transformer, 'inverse_transform'):
+            arr = transformer.inverse_transform(arr)
+        arrays.append(arr)
+    return np.concatenate(arrays, axis=1)
+
 # Exemple d'utilisation
 hyperparametres = get_hyperparametres_json("./output/hyperparametres.json")
 
@@ -43,7 +54,6 @@ input_dim = hyperparametres["input_dim"]
 
 num_samples = 10
 origin_data = df
-X_scaled = scaler.fit_transform(X.values)
 
 def generate_samples(model, num_samples, latent_dim, device=device):
     """
@@ -60,20 +70,30 @@ def generate_samples(model, num_samples, latent_dim, device=device):
     return generated_samples.cpu().numpy()
 
 if __name__ == "__main__":
-    encoder = VEncoder(input_dim=input_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
-    decoder = VDecoder(latent_dim=latent_dim, hidden_dim=hidden_dim, input_dim=input_dim)
+    encoder = VEncoder(input_dim=input_dim, hidden_dim=hidden_dim, latent_dim=latent_dim, processor_dim=shape_processor)
+    decoder = VDecoder(latent_dim=latent_dim, hidden_dim=hidden_dim, input_dim=input_dim, processor_dim=shape_processor)
 
     # Initialiser le modèle avec les mêmes paramètres
     model_infer = VAE(encoder,decoder)
     model_infer.load_state_dict(torch.load("./output/vae_model.pth"))
-    generated_data = generate_samples(model_infer, num_samples, latent_dim)
+
+
+    generated_data = generate_samples(model_infer, num_samples, shape_processor)
+    og = pd.DataFrame(pipe['preprocessor'].transform(df),
+                               columns=preprocessor.get_feature_names_out().tolist())
+
+    preprocessor_transformer = pipe.named_steps['preprocessor']
+
+    df_inverse_transformed = inverse_transform_pipe(generated_data)
+    generated_df = pd.DataFrame(df_inverse_transformed, columns=[col for cat_num in [p[2] for p in preprocessor.get_params()['transformers']] for col in cat_num])
+
 
     # Conversion en DataFrame pandas (si nécessaire)
-    generated_df = pd.DataFrame(generated_data, columns=X.columns)  # Ajustez les noms de colonnes
+    # generated_df = pd.DataFrame(generated_data, columns=X.columns)  # Ajustez les noms de colonnes
 
-    # Si vous avez utilisé un StandardScaler
-    generated_df = pd.DataFrame(scaler.inverse_transform(generated_data), 
-                            columns=X.columns)
+    # # Si vous avez utilisé un StandardScaler
+    # generated_df = pd.DataFrame(scaler.inverse_transform(generated_data), 
+    #                         columns=X.columns)
 
     # og = df.drop(columns=['Person ID', 'Gender', 'Occupation', 'Blood Pressure', 'Sleep Disorder', 'BMI Category', 'Sleep Duration'])
     

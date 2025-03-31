@@ -13,17 +13,17 @@ import seaborn as sns
 from scipy.stats import ks_2samp, wasserstein_distance
 
 class VEncoder(nn.Module):
-    def __init__(self, input_dim:int, hidden_dim: int, latent_dim: int):
+    def __init__(self, input_dim:int, hidden_dim: int, latent_dim: int, processor_dim:int):
         super(VEncoder, self).__init__()
         
         self.encoder = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
+            nn.Linear(processor_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, latent_dim),
+            nn.Linear(hidden_dim, processor_dim),
             nn.ReLU()
         )
-        self.fc_mu = nn.Linear(input_dim, latent_dim)
-        self.fc_logvar = nn.Linear(input_dim, latent_dim)
+        self.fc_mu = nn.Linear(processor_dim, latent_dim)
+        self.fc_logvar = nn.Linear(processor_dim, latent_dim)
 
     def forward(self, x):
         z_mu = self.fc_mu(x)
@@ -33,15 +33,15 @@ class VEncoder(nn.Module):
 
 
 class VDecoder(nn.Module):
-    def __init__(self, latent_dim: int, hidden_dim: int, input_dim: int):
+    def __init__(self, latent_dim: int, hidden_dim: int, input_dim: int, processor_dim: int):
         super(VDecoder, self).__init__()
 
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, hidden_dim//2),
+            nn.Linear(processor_dim, hidden_dim//2),
             nn.ReLU(),
             nn.Linear(hidden_dim//2, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, input_dim)
+            nn.Linear(hidden_dim, processor_dim)
         
         )
 
@@ -104,7 +104,8 @@ class VAE(nn.Module):
         reconstruction_loss = self.calculate_reconstruction_loss(data, reconstruction)
         kl_loss = self.calculate_kl_loss(z_mu, z_logvar)
         total_loss = self.calculate_total_loss(reconstruction_loss, kl_loss)
-
+        total_loss += 100*torch.mean(torch.relu(-reconstruction))   
+        
         # Backward pass
         total_loss.backward()
         optimizer.step()

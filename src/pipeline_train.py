@@ -2,6 +2,9 @@ import pandas as pd
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
 from tqdm import tqdm
 import argparse
 import json
@@ -27,7 +30,23 @@ def import_data():
 
 scaler = preprocessing.StandardScaler()
 df = import_data()
-X = df[['Age', 'Quality of Sleep', 'Physical Activity Level', 'Stress Level', 'Heart Rate', 'Daily Steps']]
+# X = df[['Age', 'Quality of Sleep', 'Physical Activity Level', 'Stress Level', 'Heart Rate', 'Daily Steps']]
+X = df
+
+cat_features = ['Gender', 'Occupation', 'BMI Category', 'Sleep Disorder']
+num_features = ['Age', 'Sleep Duration', 'Quality of Sleep', 'Physical Activity Level', 'Stress Level', 'Daily Steps', 'Heart Rate']
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', preprocessing.StandardScaler(), num_features),
+        ('cat', preprocessing.OneHotEncoder(sparse_output=False), cat_features)
+    ])
+pipe = Pipeline([
+    ('preprocessor', preprocessor),
+])
+
+X_preproc = pipe.fit_transform(X)
+shape_processor = X_preproc.shape[1]
 
 def sauvegarder_hyperparametres(hyperparametres, nom_fichier="hyperparametres.json"):
     """
@@ -62,13 +81,13 @@ def main_train():
     
 
     # Initialiser et entraîner le modèle
-    encoder = VEncoder(input_dim=input_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
-    decoder = VDecoder(latent_dim=latent_dim, hidden_dim=hidden_dim, input_dim=input_dim)
+    encoder = VEncoder(input_dim=input_dim, hidden_dim=hidden_dim, latent_dim=latent_dim, processor_dim=shape_processor)
+    decoder = VDecoder(latent_dim=latent_dim, hidden_dim=hidden_dim, input_dim=input_dim, processor_dim=shape_processor)
     vae = VAE(encoder, decoder).to(device)
     optimizer = optim.Adam(vae.parameters(), lr=learning_rate)
 
-    X_scaled = scaler.fit_transform(X.values)
-    X_train, X_val = train_test_split(X_scaled, test_size=0.2)
+    # X_scaled = scaler.fit_transform(X.values)
+    X_train, X_val = train_test_split(X_preproc, test_size=0.2)
 
     X_train_tensor = torch.FloatTensor(X_train)
     X_val_tensor = torch.FloatTensor(X_val)
@@ -117,9 +136,7 @@ def main_train():
 
 if __name__ == "__main__":
     main_train()
-    df = df
-    X = X
-    
+   
 
     
         
